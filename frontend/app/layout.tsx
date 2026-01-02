@@ -1,34 +1,24 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Load the Inter font
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "MCD Sahayak - Civic Complaint Portal",
-  description: "AI-powered civic complaint management system for Municipal Corporation of Delhi",
-};
+  title: 'MCD-Sahayak Command Center',
+  description: 'Real-time Governance Monitoring System',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      {/* Apply the font to the body */}
+      <body className={`${inter.className} bg-slate-950 text-slate-100 antialiased`}>{children}</body>
     </html>
-  );
+  )
 }
