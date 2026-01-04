@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # 1. Load Secrets
 load_dotenv()
 
-app = FastAPI(title="MCD-Sahayak Brain")
+app = FastAPI(title="Sampark API")
 
 # 2. Allow Frontend to talk to Backend (CORS)
 app.add_middleware(
@@ -38,7 +38,7 @@ class Complaint(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"status": "MCD Brain Online", "version": "1.0"}
+    return {"status": "Sampark API Online", "version": "1.0"}
 
 @app.post("/api/log-complaint")
 def log_complaint(data: Complaint):

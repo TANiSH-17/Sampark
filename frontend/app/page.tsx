@@ -90,7 +90,7 @@ export default function Dashboard() {
               <Shield className="w-7 h-7 text-blue-400" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">MCD-Sahayak</h1>
+              <h1 className="text-lg font-bold text-white tracking-tight">Sampark</h1>
               <p className="text-xs text-slate-400">Municipal Corporation of Delhi</p>
             </div>
           </div>
@@ -331,7 +331,7 @@ export default function Dashboard() {
         {/* Footer */}
         <footer className="mt-10 pt-6 border-t border-slate-800/50 text-center">
           <p className="text-xs text-slate-500">
-            © 2026 Municipal Corporation of Delhi • MCD-Sahayak Command Center • All Rights Reserved
+            © 2026 Municipal Corporation of Delhi • Sampark Command Center • Hack4 Delhi
           </p>
         </footer>
       </main>

@@ -1,13 +1,15 @@
-# MCD Sahayak 🏛️
+# Sampark 🏛️
+
+> **Hack4 Delhi Hackathon Project** 🚀
 
 **AI-Powered Civic Complaint Management System for Municipal Corporation of Delhi**
 
-A full-stack application that enables citizens to log complaints via voice/text and provides MCD officials with a real-time dashboard for tracking and resolution.
+Sampark ("connection" in Hindi) is a full-stack application that bridges the gap between citizens and the Municipal Corporation of Delhi. It enables citizens to log complaints via voice/text and provides MCD officials with a real-time dashboard for tracking and resolution.
 
 ## 🏗️ Architecture
 
 ```
-mcd-sahayak/
+sampark/
 ├── backend/          # FastAPI + Supabase
 │   ├── app/
 │   │   └── main.py   # API endpoints
@@ -41,8 +43,8 @@ mcd-sahayak/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/mcd-sahayak.git
-cd mcd-sahayak
+git clone https://github.com/<your-username>/sampark.git
+cd sampark
 ```
 
 ### 2. Backend Setup
@@ -177,6 +179,8 @@ This project is licensed under the MIT License.
 
 Built with ❤️ for improving civic services in Delhi.
 
+**Developed for Hack4 Delhi Hackathon 2026**
+
 ---
 
-**MCD Sahayak** - Making civic complaint resolution faster and smarter.
+**Sampark** - Connecting citizens with civic services, faster and smarter.
