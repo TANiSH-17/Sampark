@@ -2,45 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Trash2,
-  Droplets,
-  Lightbulb,
-  Construction,
-  Bug,
-  TreeDeciduous,
-  Play,
-  Pause,
-  Volume2,
-  UserCheck,
-  CheckCircle2,
-  MessageCircle,
-  MapPin,
-  Clock,
-  Phone,
-  User,
-  FileText,
-  Filter,
-  RefreshCw,
-  Headphones,
-  MessageSquare,
-  Loader2,
-  X,
+  Trash2, Droplets, Lightbulb, Construction, Bug, TreeDeciduous,
+  Play, Pause, Volume2, UserCheck, CheckCircle2, MessageCircle,
+  MapPin, Clock, Phone, User, FileText, Filter, RefreshCw,
+  Headphones, MessageSquare, Loader2, X, AlertTriangle, 
+  ArrowRight, Activity, Calendar
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { supabase, type Complaint } from '@/lib/supabase';
 import { useZoneStore } from '@/lib/store';
 import { useToast } from '@/components/ui/use-toast';
+// IMPORT THE NEW COMPONENT
+import AIAnalysisPanel from '@/components/complaints/AIAnalysisPanel';
 
-// Extended complaint type with call data
+// --- Types ---
 interface ComplaintWithCall extends Complaint {
   call_duration?: number;
   call_transcript?: string;
@@ -50,79 +30,43 @@ interface ComplaintWithCall extends Complaint {
   _rawId?: string;
 }
 
-// Category icons mapping
-const categoryIcons: Record<string, { icon: typeof Trash2; color: string; bg: string }> = {
-  Garbage: { icon: Trash2, color: 'text-amber-600', bg: 'bg-amber-50' },
-  Water: { icon: Droplets, color: 'text-blue-600', bg: 'bg-blue-50' },
-  'Street Light': { icon: Lightbulb, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-  Streetlight: { icon: Lightbulb, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-  Road: { icon: Construction, color: 'text-orange-600', bg: 'bg-orange-50' },
-  'Pest Control': { icon: Bug, color: 'text-red-600', bg: 'bg-red-50' },
-  Sewage: { icon: Droplets, color: 'text-purple-600', bg: 'bg-purple-50' },
-  Trees: { icon: TreeDeciduous, color: 'text-green-600', bg: 'bg-green-50' },
-  Others: { icon: FileText, color: 'text-slate-600', bg: 'bg-slate-50' },
+// --- Constants & Config ---
+const CATEGORIES = [
+  'Garbage', 'Water', 'Street Light', 'Road', 
+  'Pest Control', 'Sewage', 'Trees', 'Others'
+];
+
+const categoryConfig: Record<string, { icon: any; color: string; bg: string; border: string }> = {
+  Garbage: { icon: Trash2, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
+  Water: { icon: Droplets, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+  'Street Light': { icon: Lightbulb, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+  Streetlight: { icon: Lightbulb, color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+  Road: { icon: Construction, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+  'Pest Control': { icon: Bug, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
+  Sewage: { icon: Droplets, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
+  Trees: { icon: TreeDeciduous, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+  Others: { icon: FileText, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200' },
 };
 
-// All categories for filter
-const CATEGORIES = [
-  'Garbage',
-  'Water',
-  'Street Light',
-  'Streetlight',
-  'Road',
-  'Pest Control',
-  'Sewage',
-  'Trees',
-  'Others',
-];
-
-// Delhi zones
-const ZONES = [
-  'Central Delhi',
-  'East Delhi',
-  'New Delhi',
-  'North Delhi',
-  'North East Delhi',
-  'North West Delhi',
-  'Shahdara',
-  'South Delhi',
-  'South East Delhi',
-  'South West Delhi',
-  'West Delhi',
-];
-
 function getStatusStyle(status: string) {
-  const normalizedStatus = status?.toLowerCase().replace(' ', '-');
-  switch (normalizedStatus) {
-    case 'open':
-      return 'bg-amber-100 text-amber-700';
-    case 'in-progress':
-    case 'in progress':
-      return 'bg-blue-100 text-blue-700';
-    case 'resolved':
-    case 'closed':
-      return 'bg-emerald-100 text-emerald-700';
-    case 'escalated':
-    case 'critical':
-      return 'bg-red-100 text-red-700';
-    default:
-      return 'bg-slate-100 text-slate-700';
+  const s = status?.toLowerCase().replace(' ', '-');
+  switch (s) {
+    case 'open': return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'in-progress': return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'resolved': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'escalated': return 'bg-red-50 text-red-700 border-red-200';
+    default: return 'bg-slate-50 text-slate-700 border-slate-200';
   }
 }
 
 function formatTime(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const mins = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins} mins ago`;
-  if (hours < 24) return `${hours} hours ago`;
-  if (days < 7) return `${days} days ago`;
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  const diff = (now.getTime() - date.getTime()) / 1000; 
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 function formatDuration(seconds: number | undefined) {
@@ -136,766 +80,224 @@ export default function ComplaintsPage() {
   const [complaints, setComplaints] = useState<ComplaintWithCall[]>([]);
   const [selectedComplaint, setSelectedComplaint] = useState<ComplaintWithCall | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-
-  // Filter states
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [regionFilter, setRegionFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
   const { selectedZone } = useZoneStore();
   const { toast } = useToast();
 
-  // Fetch complaints from Supabase
   useEffect(() => {
     async function fetchComplaints() {
       setIsLoading(true);
       try {
-        let query = supabase
-          .from('complaints')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
-
-        // Apply zone filter from global store or region filter
+        let query = supabase.from('complaints').select('*').order('created_at', { ascending: false }).limit(100);
         const zoneToFilter = regionFilter !== 'all' ? regionFilter : selectedZone;
-        if (zoneToFilter && zoneToFilter !== 'all') {
-          query = query.eq('zone', zoneToFilter);
-        }
-
-        // Apply category filter
-        if (categoryFilter !== 'all') {
-          query = query.eq('category', categoryFilter);
-        }
-
-        // Apply status filter
+        if (zoneToFilter && zoneToFilter !== 'all') query = query.eq('zone', zoneToFilter);
+        if (categoryFilter !== 'all') query = query.eq('category', categoryFilter);
         if (statusFilter !== 'all') {
-          const statusMap: Record<string, string> = {
-            open: 'Open',
-            'in-progress': 'In Progress',
-            resolved: 'Resolved',
-            escalated: 'Escalated',
-          };
-          query = query.eq('status', statusMap[statusFilter] || statusFilter);
+            const map: any = { open: 'Open', 'in-progress': 'In Progress', resolved: 'Resolved', escalated: 'Escalated' };
+            query = query.eq('status', map[statusFilter] || statusFilter);
         }
-
         const { data, error } = await query;
-
-        if (error) {
-          console.error('Supabase error:', error);
-          toast({
-            title: '⚠️ Database Error',
-            description: 'Could not fetch complaints. Check your Supabase configuration.',
-            variant: 'destructive',
-          });
-          setComplaints([]);
-        } else if (data && data.length > 0) {
-          // Map database fields to component format
-          const mappedComplaints = data.map((c: any) => ({
-            id: c.complaint_number || c.id,
-            created_at: c.created_at,
-            category: c.category,
-            title: c.title || `${c.category} Issue - ${c.location?.split(',')[0] || 'Unknown'}`,
-            description: c.description,
-            location: c.location,
-            latitude: c.latitude,
-            longitude: c.longitude,
-            status: (c.status || 'Open').toLowerCase().replace(' ', '-') as any,
-            priority: c.priority || 'medium',
-            citizen_name: c.citizen_name || 'Anonymous',
-            citizen_phone: c.caller_phone,
-            zone: c.zone,
-            ward: c.ward,
-            assigned_to: c.assigned_to,
-            resolved_at: c.resolved_at,
-            ai_summary: c.ai_summary || c.description,
-            sentiment: c.sentiment,
-            source: c.source,
-            _rawId: c.id, // Keep original UUID for call lookup
+        if (error) throw error;
+        if (data) {
+          const mapped = data.map((c: any) => ({
+            ...c, id: c.complaint_number || c.id, status: (c.status || 'Open').toLowerCase().replace(' ', '-'),
+            priority: c.priority || 'medium', title: c.title || `${c.category} Report @ ${c.location?.split(',')[0]}`,
+            _rawId: c.id
           }));
-          setComplaints(mappedComplaints);
-          // Auto-select first complaint
-          if (mappedComplaints.length > 0 && !selectedComplaint) {
-            handleSelectComplaint(mappedComplaints[0]);
-          }
-        } else {
-          setComplaints([]);
-          setSelectedComplaint(null);
+          setComplaints(mapped);
+          if (mapped.length > 0 && !selectedComplaint) handleSelectComplaint(mapped[0]);
         }
-      } catch (err) {
-        console.error('Failed to fetch complaints:', err);
-        setComplaints([]);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (err) { console.error('Fetch error:', err); } finally { setIsLoading(false); }
     }
-
     fetchComplaints();
   }, [selectedZone, statusFilter, categoryFilter, regionFilter]);
 
-  // Realtime subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel('complaints-inbox')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'complaints' },
-        (payload) => {
-          const c = payload.new as any;
-          const newComplaint: ComplaintWithCall = {
-            id: c.complaint_number || c.id,
-            created_at: c.created_at,
-            category: c.category,
-            title: c.title || `${c.category} Issue - ${c.location?.split(',')[0] || 'Unknown'}`,
-            description: c.description,
-            location: c.location,
-            latitude: c.latitude,
-            longitude: c.longitude,
-            status: (c.status || 'Open').toLowerCase().replace(' ', '-') as any,
-            priority: c.priority || 'medium',
-            citizen_name: c.citizen_name || 'Anonymous',
-            citizen_phone: c.caller_phone,
-            zone: c.zone,
-            ward: c.ward,
-            ai_summary: c.ai_summary || c.description,
-            sentiment: c.sentiment,
-            source: c.source,
-            _rawId: c.id,
-          };
-          setComplaints((prev) => [newComplaint, ...prev]);
-          toast({
-            title: '🔔 New Complaint',
-            description: `${newComplaint.category} - ${newComplaint.location}`,
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'complaints' },
-        (payload) => {
-          const c = payload.new as any;
-          setComplaints((prev) =>
-            prev.map((complaint) =>
-              complaint._rawId === c.id
-                ? {
-                    ...complaint,
-                    status: (c.status || 'Open').toLowerCase().replace(' ', '-'),
-                    assigned_to: c.assigned_to,
-                    resolved_at: c.resolved_at,
-                  }
-                : complaint
-            )
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [toast]);
-
-  // Fetch call details when selecting a complaint
   const handleSelectComplaint = async (complaint: ComplaintWithCall) => {
     setSelectedComplaint(complaint);
     setIsLoadingDetails(true);
-
     try {
-      // Look up call data linked to this complaint
-      const { data: callData, error } = await supabase
-        .from('calls')
-        .select('*')
-        .eq('complaint_id', complaint._rawId)
-        .single();
-
-      if (!error && callData) {
-        setSelectedComplaint({
-          ...complaint,
-          call_duration: callData.duration_seconds,
-          call_transcript: callData.transcript,
-          call_summary: callData.summary,
-          recording_url: callData.recording_url,
-        });
+      if (complaint.source === 'voice') {
+        const { data } = await supabase.from('calls').select('*').eq('complaint_id', complaint._rawId).single();
+        if (data) {
+          setSelectedComplaint(prev => prev ? ({ ...prev, call_duration: data.duration_seconds, call_transcript: data.transcript, call_summary: data.summary, recording_url: data.recording_url }) : null);
+        }
       }
-    } catch (err) {
-      // No call data found - that's fine for non-voice complaints
-    } finally {
-      setIsLoadingDetails(false);
-    }
+    } catch (e) { console.error(e); }
+    setIsLoadingDetails(false);
   };
 
-  // Filter complaints by search
-  const filteredComplaints = complaints.filter((c) => {
-    const matchesSearch =
-      searchQuery === '' ||
-      c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.category?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
-
-  const handleAssign = async () => {
+  const updateStatus = async (status: string, assignedTo?: string) => {
     if (!selectedComplaint) return;
-
     try {
-      await supabase
-        .from('complaints')
-        .update({
-          status: 'In Progress',
-          assigned_to: 'Junior Engineer',
-          assigned_at: new Date().toISOString(),
-        })
-        .eq('id', selectedComplaint._rawId);
-
-      setSelectedComplaint({ ...selectedComplaint, status: 'in-progress', assigned_to: 'Junior Engineer' });
-
-      toast({
-        title: '✅ Assigned Successfully',
-        description: 'Complaint assigned to Junior Engineer',
-      });
-    } catch (err) {
-      toast({
-        title: '❌ Assignment Failed',
-        description: 'Could not assign complaint',
-        variant: 'destructive',
-      });
-    }
+        await supabase.from('complaints').update({ status: status === 'in-progress' ? 'In Progress' : 'Resolved', assigned_to: assignedTo, resolved_at: status === 'resolved' ? new Date().toISOString() : null }).eq('id', selectedComplaint._rawId);
+        setComplaints(prev => prev.map(c => c.id === selectedComplaint.id ? { ...c, status: status, assigned_to: assignedTo || c.assigned_to } : c));
+        setSelectedComplaint(prev => prev ? ({ ...prev, status: status, assigned_to: assignedTo || prev.assigned_to }) : null);
+        toast({ title: 'Status Updated', description: `Complaint marked as ${status}.` });
+    } catch (e) { toast({ title: 'Update Failed', variant: 'destructive' }); }
   };
 
-  const handleResolve = async () => {
-    if (!selectedComplaint) return;
-
-    try {
-      await supabase
-        .from('complaints')
-        .update({
-          status: 'Resolved',
-          resolved_at: new Date().toISOString(),
-        })
-        .eq('id', selectedComplaint._rawId);
-
-      setComplaints((prev) =>
-        prev.map((c) =>
-          c.id === selectedComplaint.id ? { ...c, status: 'resolved' as const } : c
-        )
-      );
-      setSelectedComplaint({ ...selectedComplaint, status: 'resolved' });
-
-      toast({
-        title: '✅ Marked as Resolved',
-        description: 'Complaint status updated successfully',
-      });
-    } catch (err) {
-      toast({
-        title: '❌ Update Failed',
-        description: 'Could not update complaint status',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleWhatsApp = () => {
-    if (selectedComplaint?.citizen_phone) {
-      const message = encodeURIComponent(
-        `Dear Citizen, your complaint ${selectedComplaint.id} regarding ${selectedComplaint.category} has been received. Current status: ${selectedComplaint.status}. Thank you for using Sampark MCD.`
-      );
-      window.open(`https://wa.me/${selectedComplaint.citizen_phone}?text=${message}`, '_blank');
-    }
-    toast({
-      title: '📱 WhatsApp Update Sent',
-      description: 'Citizen notified via WhatsApp',
-    });
-  };
-
-  const clearFilters = () => {
-    setStatusFilter('all');
-    setCategoryFilter('all');
-    setRegionFilter('all');
-    setSearchQuery('');
-  };
-
-  const hasActiveFilters =
-    statusFilter !== 'all' || categoryFilter !== 'all' || regionFilter !== 'all' || searchQuery !== '';
-
-  const CategoryIcon = selectedComplaint
-    ? categoryIcons[selectedComplaint.category]?.icon || FileText
-    : FileText;
-
-  // Stats for current filter
-  const openCount = complaints.filter((c) => c.status === 'open').length;
-  const inProgressCount = complaints.filter((c) => c.status === 'in-progress').length;
-  const resolvedCount = complaints.filter((c) => c.status === 'resolved').length;
+  const filtered = complaints.filter(c => searchQuery === '' || JSON.stringify(c).toLowerCase().includes(searchQuery.toLowerCase()));
+  const getCatConfig = (cat: string) => categoryConfig[cat] || categoryConfig['Others'];
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-[calc(100vh-2rem)] p-4 gap-4">
+      <header className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Complaints Inbox</h1>
-          <p className="text-slate-500 mt-1">Manage and respond to citizen complaints</p>
+           <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Grievance Inbox
+           </h1>
+           <p className="text-xs text-slate-500 mt-1">Real-time feed • {complaints.length} Total Records</p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Quick Stats */}
-          <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-lg">
-            <span className="text-amber-700 text-sm font-medium">{openCount} Open</span>
-          </div>
-          <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg">
-            <span className="text-blue-700 text-sm font-medium">{inProgressCount} In Progress</span>
-          </div>
-          <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-lg">
-            <span className="text-emerald-700 text-sm font-medium">{resolvedCount} Resolved</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+           <div className="relative group w-full md:w-64">
+             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none"><Filter className="h-4 w-4 text-slate-400" /></div>
+             <Input className="pl-9 bg-slate-50" placeholder="Search ID, Area, Keyword..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+           </div>
+           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[140px] text-xs h-9 bg-slate-50"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+           </Select>
+           <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[120px] text-xs h-9 bg-slate-50"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="open">Open</SelectItem><SelectItem value="in-progress">In Progress</SelectItem><SelectItem value="resolved">Resolved</SelectItem></SelectContent>
+           </Select>
         </div>
-      </div>
+      </header>
 
-      {/* Filters Row */}
-      <div className="flex items-center gap-3 mb-4 p-4 bg-slate-50 rounded-xl">
-        <Filter className="w-4 h-4 text-slate-400" />
-
-        {/* Status Filter */}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px] bg-white">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="open">🟡 Open</SelectItem>
-            <SelectItem value="in-progress">🔵 In Progress</SelectItem>
-            <SelectItem value="resolved">🟢 Resolved</SelectItem>
-            <SelectItem value="escalated">🔴 Escalated</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Category Filter */}
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[150px] bg-white">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Region Filter */}
-        <Select value={regionFilter} onValueChange={setRegionFilter}>
-          <SelectTrigger className="w-[170px] bg-white">
-            <SelectValue placeholder="Region/Zone" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Zones</SelectItem>
-            {ZONES.map((zone) => (
-              <SelectItem key={zone} value={zone}>
-                {zone}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Search */}
-        <Input
-          placeholder="Search ID, location, category..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-xs bg-white"
-        />
-
-        {/* Clear Filters */}
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-slate-500">
-            <X className="w-4 h-4 mr-1" />
-            Clear
-          </Button>
-        )}
-
-        <div className="ml-auto text-sm text-slate-500 font-medium">
-          {filteredComplaints.length} complaints
-        </div>
-      </div>
-
-      {/* Split View */}
-      <div className="flex-1 flex gap-4 min-h-0">
-        {/* Left Panel - List */}
-        <Card className="w-[420px] flex flex-col">
-          <CardHeader className="pb-3 border-b">
-            <CardTitle className="text-base flex items-center justify-between">
-              <span>Ticket List</span>
-              <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-              </div>
-            ) : filteredComplaints.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-slate-400">
-                <FileText className="w-10 h-10 mb-2 opacity-50" />
-                <p>No complaints found</p>
-                <p className="text-sm">Try adjusting your filters</p>
-              </div>
-            ) : (
-              filteredComplaints.map((complaint) => {
-                const catIcon = categoryIcons[complaint.category] || {
-                  icon: FileText,
-                  color: 'text-slate-600',
-                  bg: 'bg-slate-50',
-                };
-                const Icon = catIcon.icon;
-
-                return (
-                  <div
-                    key={complaint.id}
-                    onClick={() => handleSelectComplaint(complaint)}
-                    className={`p-4 border-b cursor-pointer transition-all ${
-                      selectedComplaint?.id === complaint.id
-                        ? 'bg-blue-50 border-l-4 border-l-blue-600'
-                        : 'hover:bg-slate-50 border-l-4 border-l-transparent'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${catIcon.bg}`}>
-                        <Icon className={`w-4 h-4 ${catIcon.color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-mono text-slate-400">{complaint.id}</span>
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${getStatusStyle(
-                              complaint.status
-                            )}`}
-                          >
-                            {complaint.status.replace('-', ' ')}
-                          </span>
-                        </div>
-                        <h3 className="text-sm font-medium text-slate-900 mt-1 truncate">
-                          {complaint.title}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-1.5">
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <MapPin className="w-3 h-3" />
-                            <span className="truncate max-w-[120px]">
-                              {complaint.location?.split(',')[0]}
-                            </span>
+      <div className="flex-1 flex gap-4 overflow-hidden">
+        <Card className="w-full md:w-[400px] flex flex-col border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+           <div className="p-3 border-b border-slate-100 flex justify-between items-center bg-white">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Incoming Feed</span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.location.reload()}><RefreshCw className="h-3 w-3" /></Button>
+           </div>
+           <div className="flex-1 overflow-y-auto custom-scrollbar">
+              {isLoading ? <div className="flex justify-center p-8"><Loader2 className="animate-spin text-slate-400" /></div> : filtered.length === 0 ? <div className="text-center p-8 text-slate-400 text-sm">No complaints found.</div> : filtered.map(c => {
+                    const config = getCatConfig(c.category);
+                    const Icon = config.icon;
+                    const isActive = selectedComplaint?.id === c.id;
+                    return (
+                       <div key={c.id} onClick={() => handleSelectComplaint(c)} className={`group p-4 border-b border-slate-50 cursor-pointer transition-all hover:bg-slate-50 ${isActive ? 'bg-blue-50/50 border-l-4 border-l-blue-500' : 'border-l-4 border-l-transparent'}`}>
+                          <div className="flex justify-between items-start mb-1">
+                             <div className="flex items-center gap-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusStyle(c.status)}`}>{c.status}</span>
+                                {c.source === 'voice' && <Headphones className="w-3 h-3 text-purple-500" />}
+                             </div>
+                             <span className="text-[10px] text-slate-400 font-medium">{formatTime(c.created_at)}</span>
                           </div>
-                          {complaint.zone && (
-                            <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                              {complaint.zone?.split(' ')[0]}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between mt-1.5">
-                          <p className="text-xs text-slate-400">{formatTime(complaint.created_at)}</p>
-                          {complaint.source === 'voice' && (
-                            <span className="text-xs text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                              <Headphones className="w-3 h-3" />
-                              Voice
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                          <div className="flex items-start gap-3">
+                             <div className={`mt-1 p-1.5 rounded-md ${config.bg} ${config.color}`}><Icon className="w-4 h-4" /></div>
+                             <div className="flex-1 min-w-0">
+                                <h4 className={`text-sm font-semibold truncate ${isActive ? 'text-blue-700' : 'text-slate-800'}`}>{c.category} Issue</h4>
+                                <p className="text-xs text-slate-500 truncate mt-0.5">{c.location}</p>
+                                <p className="text-[10px] text-slate-400 mt-1 truncate">ID: {c.id}</p>
+                             </div>
+                          </div>
+                       </div>
+                    );
+              })}
+           </div>
         </Card>
 
-        {/* Right Panel - Detail View */}
-        {selectedComplaint ? (
-          <Card className="flex-1 flex flex-col overflow-hidden">
-            {/* Detail Header */}
-            <CardHeader className="border-b bg-slate-50">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div
-                    className={`p-3 rounded-xl ${
-                      categoryIcons[selectedComplaint.category]?.bg || 'bg-slate-50'
-                    }`}
-                  >
-                    <CategoryIcon
-                      className={`w-6 h-6 ${
-                        categoryIcons[selectedComplaint.category]?.color || 'text-slate-600'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl">{selectedComplaint.title}</CardTitle>
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
-                      <span className="text-sm font-mono text-slate-400">
-                        {selectedComplaint.id}
-                      </span>
-                      <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusStyle(
-                          selectedComplaint.status
-                        )}`}
-                      >
-                        {selectedComplaint.status.replace('-', ' ')}
-                      </span>
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatTime(selectedComplaint.created_at)}
-                      </span>
-                      {selectedComplaint.source === 'voice' && (
-                        <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Headphones className="w-3 h-3" />
-                          Voice Call
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <span
-                  className={`px-3 py-1 text-xs font-semibold rounded-full uppercase ${
-                    selectedComplaint.priority === 'critical'
-                      ? 'bg-red-100 text-red-700'
-                      : selectedComplaint.priority === 'high'
-                      ? 'bg-orange-100 text-orange-700'
-                      : selectedComplaint.priority === 'medium'
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {selectedComplaint.priority}
-                </span>
-              </div>
-            </CardHeader>
-
-            {/* Detail Content */}
-            <CardContent className="flex-1 overflow-y-auto p-6 space-y-5">
-              {isLoadingDetails ? (
-                <div className="flex items-center justify-center h-40">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-                </div>
-              ) : (
-                <>
-                  {/* Location & Citizen Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
-                        <MapPin className="w-5 h-5 text-slate-400 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">
-                            Location
-                          </p>
-                          <p className="text-sm text-slate-900 mt-1">{selectedComplaint.location}</p>
-                          {selectedComplaint.zone && (
-                            <p className="text-xs text-slate-500 mt-1">Zone: {selectedComplaint.zone}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4">
-                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
-                        Citizen Information
-                      </p>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <User className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm text-slate-900">
-                            {selectedComplaint.citizen_name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Phone className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm text-slate-900">
-                            {selectedComplaint.citizen_phone || 'Not provided'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Call Details - Only shown for voice complaints */}
-                  {selectedComplaint.source === 'voice' && (
-                    <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Headphones className="w-4 h-4 text-purple-600" />
-                        <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">
-                          Call Details
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="text-center p-3 bg-white rounded-lg">
-                          <p className="text-2xl font-bold text-purple-700">
-                            {formatDuration(selectedComplaint.call_duration)}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1">Call Duration</p>
-                        </div>
-                        <div className="text-center p-3 bg-white rounded-lg">
-                          <p className="text-2xl font-bold text-purple-700">
-                            {selectedComplaint.call_transcript
-                              ? Math.ceil(selectedComplaint.call_transcript.split(' ').length / 150)
-                              : 0}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1">Min Read</p>
-                        </div>
-                        <div className="text-center p-3 bg-white rounded-lg">
-                          <p className="text-2xl font-bold text-purple-700">
-                            {selectedComplaint.sentiment || 'Neutral'}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1">Sentiment</p>
-                        </div>
-                      </div>
-
-                      {/* Audio Player */}
-                      {selectedComplaint.recording_url && (
-                        <div className="flex items-center gap-4 p-3 bg-white rounded-lg mb-4">
-                          <button
-                            onClick={() => setIsPlaying(!isPlaying)}
-                            className="w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center transition-colors"
-                          >
-                            {isPlaying ? (
-                              <Pause className="w-4 h-4" />
-                            ) : (
-                              <Play className="w-4 h-4 ml-0.5" />
-                            )}
-                          </button>
-                          <div className="flex-1">
-                            <div className="h-2 bg-purple-100 rounded-full overflow-hidden">
-                              <div className="h-full w-0 bg-purple-600 rounded-full transition-all"></div>
-                            </div>
-                            <div className="flex justify-between mt-1 text-xs text-slate-500">
-                              <span>0:00</span>
-                              <span>{formatDuration(selectedComplaint.call_duration)}</span>
-                            </div>
+        <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
+           {selectedComplaint ? (
+              <>
+                 <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/30">
+                    <div className="flex gap-4">
+                       <div className={`p-3 rounded-xl border shadow-sm ${getCatConfig(selectedComplaint.category).bg} ${getCatConfig(selectedComplaint.category).border}`}>
+                          {(() => { const Icon = getCatConfig(selectedComplaint.category).icon; return <Icon className={`w-6 h-6 ${getCatConfig(selectedComplaint.category).color}`} />; })()}
+                       </div>
+                       <div>
+                          <div className="flex items-center gap-2 mb-1">
+                             <h2 className="text-lg font-bold text-slate-800">{selectedComplaint.title}</h2>
+                             {selectedComplaint.priority === 'high' && <AlertTriangle className="w-4 h-4 text-red-500" />}
                           </div>
-                          <button className="p-2 hover:bg-purple-50 rounded-lg transition-colors">
-                            <Volume2 className="w-4 h-4 text-slate-500" />
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Transcript */}
-                      {selectedComplaint.call_transcript && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <MessageSquare className="w-4 h-4 text-purple-600" />
-                            <p className="text-xs font-medium text-purple-600 uppercase tracking-wide">
-                              Call Transcript
-                            </p>
+                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                             <span className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-200"><MapPin className="w-3 h-3" /> {selectedComplaint.location}</span>
+                             <span className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-200"><Calendar className="w-3 h-3" /> {new Date(selectedComplaint.created_at).toLocaleString()}</span>
                           </div>
-                          <div className="bg-white rounded-lg p-3 max-h-48 overflow-y-auto">
-                            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                              {selectedComplaint.call_transcript}
-                            </p>
-                          </div>
-                        </div>
-                      )}
+                       </div>
                     </div>
-                  )}
+                    <div className="flex flex-col items-end gap-2">
+                       <div className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusStyle(selectedComplaint.status)}`}>{selectedComplaint.status.toUpperCase()}</div>
+                       <p className="text-xs font-mono text-slate-400">Ref: {selectedComplaint.id}</p>
+                    </div>
+                 </div>
 
-                  {/* AI Summary */}
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FileText className="w-4 h-4 text-blue-600" />
-                      <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
-                        {selectedComplaint.source === 'voice' ? 'AI Issue Summary' : 'Description'}
-                      </p>
-                    </div>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      {selectedComplaint.call_summary ||
-                        selectedComplaint.ai_summary ||
-                        selectedComplaint.description}
-                    </p>
-                    {selectedComplaint.sentiment && (
-                      <div className="flex items-center gap-2 mt-4">
-                        <span className="text-xs text-slate-500">Sentiment:</span>
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            selectedComplaint.sentiment === 'Angry'
-                              ? 'bg-red-100 text-red-700'
-                              : selectedComplaint.sentiment === 'Frustrated'
-                              ? 'bg-orange-100 text-orange-700'
-                              : selectedComplaint.sentiment === 'Neutral'
-                              ? 'bg-slate-100 text-slate-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          {selectedComplaint.sentiment}
-                        </span>
-                      </div>
+                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {isLoadingDetails ? <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-blue-500" /></div> : (
+                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-6">
+                             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Activity className="w-4 h-4" /> AI Diagnostics</h3>
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                   <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                      <p className="text-[10px] text-slate-400">Sentiment</p>
+                                      <div className="flex items-center gap-2 mt-1"><div className={`w-2 h-2 rounded-full ${selectedComplaint.sentiment === 'Negative' ? 'bg-red-500' : 'bg-green-500'}`}></div><span className="font-semibold text-sm">{selectedComplaint.sentiment || 'Neutral'}</span></div>
+                                   </div>
+                                   <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                      <p className="text-[10px] text-slate-400">Urgency Score</p>
+                                      <div className="flex items-center gap-2 mt-1"><div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500 w-[70%]"></div></div><span className="font-semibold text-sm">High</span></div>
+                                   </div>
+                                </div>
+                                <p className="text-sm text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 shadow-sm">{selectedComplaint.ai_summary || selectedComplaint.description}</p>
+                             </div>
+
+                             {/* --- INSERTED AI ANALYSIS PANEL --- */}
+                             <AIAnalysisPanel /> 
+                             {/* ---------------------------------- */}
+
+                             {selectedComplaint.source === 'voice' && (
+                                <div className="bg-purple-50/50 rounded-xl p-4 border border-purple-100">
+                                   <h3 className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-3 flex items-center gap-2"><Headphones className="w-4 h-4" /> Audio Evidence</h3>
+                                   {selectedComplaint.recording_url && (
+                                      <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-purple-100 shadow-sm mb-3">
+                                         <button onClick={() => setIsPlaying(!isPlaying)} className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white hover:bg-purple-700">{isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}</button>
+                                         <div className="flex-1 space-y-1"><div className="h-6 flex items-center gap-0.5 opacity-50">{[...Array(20)].map((_,i) => (<div key={i} className="w-1 bg-purple-600 rounded-full" style={{ height: `${Math.random() * 100}%` }}></div>))}</div></div>
+                                         <span className="text-xs font-mono text-purple-700">{formatDuration(selectedComplaint.call_duration)}</span>
+                                      </div>
+                                   )}
+                                   {selectedComplaint.call_transcript && (<div className="bg-white rounded-lg border border-purple-100 p-3 max-h-40 overflow-y-auto"><p className="text-xs text-slate-500 font-mono mb-2">TRANSCRIPT LOG:</p><p className="text-sm text-slate-800 whitespace-pre-wrap">{selectedComplaint.call_transcript}</p></div>)}
+                                </div>
+                             )}
+                          </div>
+                          <div className="space-y-6">
+                             <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-4 h-4" /> Citizen Profile</h3>
+                                <div className="flex items-center gap-4">
+                                   <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"><User className="w-6 h-6" /></div>
+                                   <div><p className="font-semibold text-slate-900">{selectedComplaint.citizen_name || 'Anonymous'}</p><p className="text-sm text-slate-500 flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedComplaint.citizen_phone || 'N/A'}</p></div>
+                                </div>
+                             </div>
+                             <div className="bg-slate-900 rounded-xl p-5 text-white shadow-lg">
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><UserCheck className="w-4 h-4" /> Dispatch Controls</h3>
+                                <div className="space-y-3">
+                                   <div className="flex justify-between items-center text-sm border-b border-slate-700 pb-2"><span className="text-slate-400">Current Assignee:</span><span className="font-mono">{selectedComplaint.assigned_to || 'Unassigned'}</span></div>
+                                   <div className="grid grid-cols-2 gap-3 mt-4">
+                                      <Button onClick={() => updateStatus('in-progress', 'Junior Engineer')} disabled={selectedComplaint.status !== 'open'} className="bg-blue-600 hover:bg-blue-700 text-white">Assign JE</Button>
+                                      <Button onClick={() => updateStatus('resolved')} disabled={selectedComplaint.status === 'resolved'} className="bg-emerald-600 hover:bg-emerald-700 text-white">Resolve</Button>
+                                   </div>
+                                   <Button variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white mt-2"><MessageCircle className="w-4 h-4 mr-2" /> Send WhatsApp Update</Button>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
                     )}
-                  </div>
-
-                  {/* Map Preview */}
-                  {selectedComplaint.latitude && selectedComplaint.longitude && (
-                    <div className="bg-slate-100 rounded-xl h-40 flex items-center justify-center relative overflow-hidden">
-                      <iframe
-                        className="absolute inset-0 w-full h-full"
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${
-                          selectedComplaint.longitude - 0.01
-                        },${selectedComplaint.latitude - 0.01},${
-                          selectedComplaint.longitude + 0.01
-                        },${selectedComplaint.latitude + 0.01}&layer=mapnik&marker=${
-                          selectedComplaint.latitude
-                        },${selectedComplaint.longitude}`}
-                        style={{ border: 0 }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Assignment Info */}
-                  {selectedComplaint.assigned_to && (
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <UserCheck className="w-4 h-4 text-emerald-600" />
-                        <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">
-                          Assigned To
-                        </p>
-                      </div>
-                      <p className="text-sm text-slate-700">{selectedComplaint.assigned_to}</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-
-            {/* Action Bar */}
-            <div className="p-4 border-t bg-slate-50">
-              <div className="flex items-center gap-3">
-                <Button onClick={handleAssign} disabled={selectedComplaint.status === 'resolved'}>
-                  <UserCheck className="w-4 h-4 mr-2" />
-                  Assign to JE
-                </Button>
-                <Button
-                  variant="success"
-                  onClick={handleResolve}
-                  disabled={selectedComplaint.status === 'resolved'}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Mark Resolved
-                </Button>
-                <Button
-                  variant="outline"
-                  className="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                  onClick={handleWhatsApp}
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  WhatsApp Update
-                </Button>
+                 </div>
+              </>
+           ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                 <div className="p-4 bg-slate-50 rounded-full mb-4"><FileText className="w-10 h-10 opacity-50" /></div>
+                 <p className="font-medium">Select a grievance to view details</p>
+                 <p className="text-sm">Select from the feed on the left</p>
               </div>
-            </div>
-          </Card>
-        ) : (
-          <Card className="flex-1 flex items-center justify-center">
-            <div className="text-center text-slate-400">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">Select a complaint to view details</p>
-              <p className="text-sm mt-1">Click on any complaint from the list</p>
-            </div>
-          </Card>
-        )}
+           )}
+        </div>
       </div>
     </div>
   );

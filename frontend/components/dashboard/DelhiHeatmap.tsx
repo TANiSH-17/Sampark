@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, RefreshCw, Layers } from 'lucide-react';
+import { MapPin, RefreshCw } from 'lucide-react';
 import { supabase, type HeatmapPoint } from '@/lib/supabase';
 import { useZoneStore } from '@/lib/store';
 
@@ -100,84 +100,6 @@ const ZONE_POLYGONS: Record<string, [number, number][]> = {
     [28.60, 77.14],
   ],
 };
-
-// Zone-specific hotspots
-const ZONE_HOTSPOTS: Record<string, { lat: number; lng: number; weight: number; area: string }[]> = {
-  all: [
-    { lat: 28.7041, lng: 77.1025, weight: 0.9, area: 'Rohini' },
-    { lat: 28.5245, lng: 77.1855, weight: 0.8, area: 'Saket' },
-    { lat: 28.6448, lng: 77.2167, weight: 0.85, area: 'Karol Bagh' },
-    { lat: 28.6280, lng: 77.2788, weight: 0.7, area: 'Laxmi Nagar' },
-    { lat: 28.6517, lng: 77.0460, weight: 0.75, area: 'Dwarka' },
-    { lat: 28.6692, lng: 77.4538, weight: 0.6, area: 'Noida Border' },
-  ],
-  north: [
-    { lat: 28.7500, lng: 77.1167, weight: 0.9, area: 'Model Town' },
-    { lat: 28.7260, lng: 77.1103, weight: 0.85, area: 'Azadpur' },
-    { lat: 28.7041, lng: 77.1025, weight: 0.8, area: 'Rohini Sector 7' },
-    { lat: 28.7380, lng: 77.1500, weight: 0.7, area: 'GTB Nagar' },
-  ],
-  south: [
-    { lat: 28.5245, lng: 77.1855, weight: 0.9, area: 'Saket' },
-    { lat: 28.5672, lng: 77.2100, weight: 0.85, area: 'Hauz Khas' },
-    { lat: 28.5355, lng: 77.2500, weight: 0.8, area: 'Kalkaji' },
-    { lat: 28.4900, lng: 77.1700, weight: 0.7, area: 'Mehrauli' },
-  ],
-  east: [
-    { lat: 28.6280, lng: 77.2788, weight: 0.9, area: 'Laxmi Nagar' },
-    { lat: 28.6350, lng: 77.3150, weight: 0.85, area: 'Preet Vihar' },
-    { lat: 28.6500, lng: 77.2700, weight: 0.8, area: 'Shahdara' },
-    { lat: 28.6100, lng: 77.3000, weight: 0.7, area: 'Mayur Vihar' },
-  ],
-  west: [
-    { lat: 28.6517, lng: 77.0460, weight: 0.9, area: 'Dwarka Sector 12' },
-    { lat: 28.6700, lng: 77.0300, weight: 0.85, area: 'Janakpuri' },
-    { lat: 28.6350, lng: 77.0650, weight: 0.8, area: 'Uttam Nagar' },
-    { lat: 28.6900, lng: 77.0800, weight: 0.7, area: 'Rajouri Garden' },
-  ],
-  central: [
-    { lat: 28.6448, lng: 77.2167, weight: 0.9, area: 'Karol Bagh' },
-    { lat: 28.6328, lng: 77.2197, weight: 0.85, area: 'Paharganj' },
-    { lat: 28.6562, lng: 77.2410, weight: 0.8, area: 'Daryaganj' },
-    { lat: 28.6200, lng: 77.2300, weight: 0.7, area: 'ITO' },
-  ],
-  'new-delhi': [
-    { lat: 28.6139, lng: 77.2090, weight: 0.9, area: 'Connaught Place' },
-    { lat: 28.5950, lng: 77.2100, weight: 0.85, area: 'India Gate' },
-    { lat: 28.6250, lng: 77.2000, weight: 0.8, area: 'Janpath' },
-    { lat: 28.6100, lng: 77.2300, weight: 0.7, area: 'Mandi House' },
-  ],
-};
-
-// Generate mock heatmap data points for a zone
-function generateMockPoints(zone: string, count: number): HeatmapPoint[] {
-  const points: HeatmapPoint[] = [];
-  const hotspots = ZONE_HOTSPOTS[zone] || ZONE_HOTSPOTS.all;
-  const bounds = ZONE_COORDINATES[zone]?.bounds || ZONE_COORDINATES.all.bounds;
-
-  hotspots.forEach((hotspot) => {
-    const clusterCount = Math.floor(count * hotspot.weight / hotspots.length);
-    for (let i = 0; i < clusterCount; i++) {
-      const variance = 0.015 * (1 - hotspot.weight + 0.3);
-      points.push({
-        lat: hotspot.lat + (Math.random() - 0.5) * variance,
-        lng: hotspot.lng + (Math.random() - 0.5) * variance,
-        intensity: 0.5 + Math.random() * 0.5,
-      });
-    }
-  });
-
-  // Add scattered points
-  for (let i = 0; i < count * 0.15; i++) {
-    points.push({
-      lat: bounds.south + Math.random() * (bounds.north - bounds.south),
-      lng: bounds.west + Math.random() * (bounds.east - bounds.west),
-      intensity: 0.3 + Math.random() * 0.4,
-    });
-  }
-
-  return points;
-}
 
 function getColor(intensity: number): string {
   if (intensity > 0.8) return '#ef4444';
@@ -397,74 +319,62 @@ export function DelhiHeatmap() {
       )
       .subscribe();
 
-    // No more fake interval updates!
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [currentZone]);
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden border-slate-200 shadow-sm">
+      <CardHeader className="pb-2.5 px-4 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-blue-600" />
-            <CardTitle className="text-lg">Real-Time Complaint Heatmap</CardTitle>
+            <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100">
+              <MapPin className="w-4 h-4 text-blue-600" />
+            </div>
+            <CardTitle className="text-base font-semibold">Complaint Heatmap</CardTitle>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Layers className="w-4 h-4" />
-              <span>{heatmapPoints.length} points</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm text-slate-500">
-                Live • {lastUpdate.toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
-          <span className="text-xs text-slate-500">Density:</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-xs text-slate-600">Low</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-yellow-500" />
-              <span className="text-xs text-slate-600">Medium</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-orange-500" />
-              <span className="text-xs text-slate-600">High</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-xs text-slate-600">Critical</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs text-slate-500 font-medium">
+              {heatmapPoints.length}
+            </span>
           </div>
         </div>
       </CardHeader>
       
       <CardContent className="p-0">
-        <div className="h-[500px] w-full relative">
+        <div className="h-[320px] w-full relative">
           {isLoading && (
-            <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center">
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-20 flex items-center justify-center">
               <div className="text-center">
-                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-                <p className="text-slate-600">Loading complaint data...</p>
+                <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mx-auto mb-2" />
+                <p className="text-xs text-slate-600">Loading...</p>
               </div>
             </div>
           )}
           
           <div 
             ref={mapContainerRef} 
-            className="h-full w-full rounded-b-xl z-10"
+            className="h-full w-full z-10"
           />
+          
+          {/* Compact Legend Overlay */}
+          {!isLoading && (
+            <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm z-30">
+              <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-slate-600">Low</span>
+                </div>
+                <span className="text-slate-300">•</span>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-orange-500" />
+                  <span className="text-slate-600">High</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

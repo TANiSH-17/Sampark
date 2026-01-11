@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getLanguage, setLanguage, type Language } from './i18n';
 
 interface ZoneState {
   selectedZone: string | null;
@@ -31,15 +32,42 @@ export const useSidebarStore = create<SidebarState>()(
   )
 );
 
-// Zone options for the dropdown
+// Language state - persisted to localStorage
+interface LanguageState {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+}
+
+export const useLanguageStore = create<LanguageState>()(
+  persist(
+    (set) => ({
+      language: getLanguage(),
+      setLanguage: (lang) => {
+        setLanguage(lang);
+        set({ language: lang });
+      },
+    }),
+    {
+      name: 'language-storage',
+    }
+  )
+);
+
+// All 12 Delhi Zones (MCD Official Zones)
 export const ZONES = [
-  { value: 'all', label: '🏢 All Delhi HQ' },
-  { value: 'north', label: '🏛️ North Zone' },
-  { value: 'south', label: '🏛️ South Zone' },
-  { value: 'east', label: '🏛️ East Zone' },
-  { value: 'west', label: '🏛️ West Zone' },
-  { value: 'central', label: '🏛️ Central Zone' },
-  { value: 'new-delhi', label: '🏛️ New Delhi Zone' },
+  { value: 'all', labelKey: 'zones.allDelhi' },
+  { value: 'central', labelKey: 'zones.centralZone' },
+  { value: 'city', labelKey: 'zones.cityZone' },
+  { value: 'civil-lines', labelKey: 'zones.civilLinesZone' },
+  { value: 'karol-bagh', labelKey: 'zones.karolBaghZone' },
+  { value: 'keshav-puram', labelKey: 'zones.keshavPuramZone' },
+  { value: 'najafgarh', labelKey: 'zones.najafgarhZone' },
+  { value: 'narela', labelKey: 'zones.narelaZone' },
+  { value: 'rohini', labelKey: 'zones.rohiniZone' },
+  { value: 'shahdara-north', labelKey: 'zones.shahdaraNorthZone' },
+  { value: 'shahdara-south', labelKey: 'zones.shahdaraSouthZone' },
+  { value: 'south', labelKey: 'zones.southZone' },
+  { value: 'west', labelKey: 'zones.westZone' },
 ] as const;
 
 export type ZoneValue = typeof ZONES[number]['value'];

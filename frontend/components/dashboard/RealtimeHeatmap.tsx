@@ -18,10 +18,10 @@ const DelhiHeatmap = dynamic(
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="h-[500px] w-full flex items-center justify-center bg-slate-50">
+          <div className="h-[320px] w-full flex items-center justify-center bg-slate-50">
             <div className="text-center">
-              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-              <p className="text-slate-600">Loading map...</p>
+              <RefreshCw className="w-6 h-6 text-blue-600 animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-600">Loading map...</p>
             </div>
           </div>
         </CardContent>

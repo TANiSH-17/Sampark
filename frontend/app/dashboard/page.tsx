@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   FileText,
   CheckCircle2,
@@ -29,10 +29,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RealtimeHeatmap } from '@/components/dashboard/RealtimeHeatmap';
 import VoiceAgent from '@/app/components/VoiceAgent';
-import { useZoneStore, ZONES } from '@/lib/store';
+import { useZoneStore, ZONES, useSidebarStore } from '@/lib/store';
 import { fetchDashboardStats, fetchRecentActivity, type DashboardStats, type Activity as ActivityType } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { useTranslation } from '@/lib/useTranslation';
 
 // Enhanced KPI Card with animation
 interface KPICardProps {
@@ -49,45 +50,58 @@ interface KPICardProps {
 }
 
 function KPICard({ title, value, icon, trend, color, subtitle }: KPICardProps) {
+  const { isCollapsed } = useSidebarStore();
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    purple: 'bg-purple-50 text-purple-600 border-purple-100',
-    red: 'bg-red-50 text-red-600 border-red-100',
-    cyan: 'bg-cyan-50 text-cyan-600 border-cyan-100',
+    blue: 'bg-blue-50 text-blue-600 border-blue-200 shadow-blue-100/50',
+    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200 shadow-emerald-100/50',
+    amber: 'bg-amber-50 text-amber-600 border-amber-200 shadow-amber-100/50',
+    purple: 'bg-purple-50 text-purple-600 border-purple-200 shadow-purple-100/50',
+    red: 'bg-red-50 text-red-600 border-red-200 shadow-red-100/50',
+    cyan: 'bg-cyan-50 text-cyan-600 border-cyan-200 shadow-cyan-100/50',
   };
 
+  // Responsive sizing based on sidebar state
+  // When sidebar is OPEN (not collapsed), icons are SMALL
+  // When sidebar is CLOSED (collapsed), icons are LARGE
+  const iconSize = isCollapsed ? 'w-5 h-5' : 'w-4 h-4';
+  const iconPadding = isCollapsed ? 'p-4' : 'p-2.5';
+  const valueSize = isCollapsed ? 'text-3xl' : 'text-2xl';
+  const cardPadding = isCollapsed ? 'p-6' : 'p-4';
+
   return (
-    <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-transparent hover:border-l-blue-500">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-slate-500">{title}</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1 tracking-tight">
+    <Card className="hover:shadow-xl transition-all duration-300 border-l-4 border-l-transparent hover:border-l-blue-500 hover-lift group">
+      <CardContent className={cardPadding}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 truncate">{title}</p>
+            <p className={`${valueSize} font-bold text-slate-900 mt-1 tracking-tight group-hover:scale-105 transition-transform`}>
               {value}
             </p>
             {subtitle && (
-              <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+              <p className="text-xs text-slate-400 mt-2 font-medium">{subtitle}</p>
             )}
             {trend && (
-              <div className="flex items-center gap-1.5 mt-2">
+              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
                 {trend.isPositive ? (
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                 ) : (
-                  <TrendingDown className="w-4 h-4 text-red-500" />
+                  <TrendingDown className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                 )}
                 <span
-                  className={`text-sm font-medium ${trend.isPositive ? 'text-emerald-600' : 'text-red-600'
+                  className={`text-sm font-semibold ${trend.isPositive ? 'text-emerald-600' : 'text-red-600'
                     }`}
                 >
                   {trend.value}%
                 </span>
-                <span className="text-xs text-slate-400">{trend.label}</span>
+                <span className="text-xs text-slate-400 font-medium truncate">{trend.label}</span>
               </div>
             )}
           </div>
-          <div className={`p-3 rounded-xl border ${colorClasses[color]}`}>{icon}</div>
+          <div className={`${iconPadding} rounded-xl border-2 shadow-sm ${colorClasses[color]} group-hover:scale-110 transition-transform flex-shrink-0`}>
+            <div className={iconSize}>
+              {icon}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -151,14 +165,15 @@ function SLABreachAlert({ breaches }: SLABreachProps) {
 
 // AI Insights Panel
 function AIInsightsPanel({ insights }: { insights: string[] }) {
+  const t = useTranslation();
   return (
     <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <Brain className="w-5 h-5 text-indigo-600" />
-          AI Insights
+          {t.dashboard.aiInsights}
           <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full ml-auto">
-            Powered by ML
+            {t.dashboard.poweredByML}
           </span>
         </CardTitle>
       </CardHeader>
@@ -178,6 +193,7 @@ function AIInsightsPanel({ insights }: { insights: string[] }) {
 
 // Citizen Sentiment Gauge
 function SentimentGauge({ positive, neutral, negative }: { positive: number; neutral: number; negative: number }) {
+  const t = useTranslation();
   const total = positive + neutral + negative || 1;
   const score = Math.round(((positive * 100 + neutral * 50) / total));
 
@@ -186,8 +202,8 @@ function SentimentGauge({ positive, neutral, negative }: { positive: number; neu
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <ThumbsUp className="w-5 h-5 text-emerald-600" />
-          Citizen Sentiment
-          <span className="text-xs text-slate-400 ml-auto">From Voice Calls</span>
+          {t.dashboard.citizenSentiment}
+          <span className="text-xs text-slate-400 ml-auto">{t.dashboard.fromVoiceCalls}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
@@ -212,15 +228,15 @@ function SentimentGauge({ positive, neutral, negative }: { positive: number; neu
           </div>
           <div className="flex-1 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-emerald-600">😊 Positive</span>
+              <span className="text-emerald-600">😊 {t.dashboard.positive}</span>
               <span className="font-medium">{positive}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-amber-600">😐 Neutral</span>
+              <span className="text-amber-600">😐 {t.dashboard.neutral}</span>
               <span className="font-medium">{neutral}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-red-600">😠 Negative</span>
+              <span className="text-red-600">😠 {t.dashboard.negative}</span>
               <span className="font-medium">{negative}</span>
             </div>
           </div>
@@ -239,6 +255,7 @@ interface ZonePerformance {
 }
 
 function ZoneLeaderboard({ zones }: { zones: ZonePerformance[] }) {
+  const t = useTranslation();
   const getRankBadge = (rank: number) => {
     if (rank === 1) return '🥇';
     if (rank === 2) return '🥈';
@@ -251,8 +268,8 @@ function ZoneLeaderboard({ zones }: { zones: ZonePerformance[] }) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <Award className="w-5 h-5 text-amber-600" />
-          Zone Performance
-          <span className="text-xs text-slate-400 ml-auto">This Week</span>
+          {t.dashboard.zonePerformance}
+          <span className="text-xs text-slate-400 ml-auto">{t.dashboard.thisWeek}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
@@ -304,6 +321,7 @@ interface ActivityItem {
 }
 
 function RecentActivityCard({ activities }: { activities: ActivityItem[] }) {
+  const t = useTranslation();
   const getIcon = (type: string) => {
     switch (type) {
       case 'complaint':
@@ -335,64 +353,59 @@ function RecentActivityCard({ activities }: { activities: ActivityItem[] }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="border-slate-200 shadow-sm">
+      <CardHeader className="pb-2.5 px-4 pt-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Activity className="w-5 h-5 text-blue-600" />
-            Live Activity Feed
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Activity className="w-4 h-4 text-blue-600" />
+            Recent Activity
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs text-slate-500">Real-time</span>
-          </div>
+          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
+      <CardContent className="pt-0 px-4 pb-4">
+        <div className="space-y-2 max-h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
           {activities.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
-              <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No recent activity</p>
+            <div className="text-center py-6 text-slate-400">
+              <Activity className="w-6 h-6 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">{t.dashboard.noRecentActivity}</p>
             </div>
           ) : (
-            activities.map((activity) => (
+            activities.slice(0, 4).map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
+                className="flex items-start gap-2 p-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
               >
-                <div className="p-2 bg-white rounded-lg shadow-sm group-hover:shadow transition-shadow">
+                <div className="p-1.5 bg-white rounded-lg shadow-sm group-hover:shadow transition-shadow flex-shrink-0">
                   {getIcon(activity.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 mb-0.5">
                     <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${getBadge(
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${getBadge(
                         activity.type
                       )}`}
                     >
-                      {activity.type === 'voice' ? 'Voice Call' : (activity.type || 'Activity').charAt(0).toUpperCase() + (activity.type || 'activity').slice(1)}
+                      {activity.type === 'voice' ? 'Voice' : (activity.type || 'Activity').charAt(0).toUpperCase() + (activity.type || 'activity').slice(1)}
                     </span>
-                    <span className="text-xs text-slate-400">{activity.time}</span>
+                    <span className="text-[10px] text-slate-400">{activity.time}</span>
                   </div>
-                  <p className="text-sm font-medium text-slate-900 mt-1 truncate">
+                  <p className="text-xs font-medium text-slate-900 truncate">
                     {activity.title}
-                  </p>
-                  <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3" />
-                    {activity.location}
                   </p>
                 </div>
               </div>
             ))
           )}
         </div>
-        <Link href="/complaints">
-          <Button variant="ghost" className="w-full mt-4">
-            View All Activity
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </Link>
+        {activities.length > 0 && (
+          <Link href="/complaints">
+            <Button variant="ghost" className="w-full mt-3 text-xs h-8">
+              View All
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
@@ -401,6 +414,8 @@ function RecentActivityCard({ activities }: { activities: ActivityItem[] }) {
 // Main Dashboard Component
 export default function DashboardPage() {
   const { selectedZone } = useZoneStore();
+  const { isCollapsed } = useSidebarStore();
+  const t = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -423,8 +438,11 @@ export default function DashboardPage() {
 
   const currentZone = selectedZone || 'all';
   const zoneName = selectedZone
-    ? ZONES.find((z) => z.value === selectedZone)?.label || 'Selected Zone'
-    : '🏢 All Delhi HQ';
+    ? (() => {
+        const zone = ZONES.find((z) => z.value === selectedZone);
+        return zone ? t.zones[zone.labelKey as keyof typeof t.zones] : 'Selected Zone';
+      })()
+    : t.zones.allDelhi;
 
   // AI Insights based on data
   const generateInsights = useCallback(() => {
@@ -605,139 +623,120 @@ export default function DashboardPage() {
       <SLABreachAlert breaches={slaBreaches} />
 
       {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Command Center
+      <div className="flex items-center justify-between mb-2">
+        <div className="fade-in">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
+            {t.dashboard.title}
           </h1>
-          <p className="text-slate-500 mt-1">
-            Real-time overview for {zoneName}
+          <p className="text-slate-600 font-medium">
+            {t.dashboard.subtitle} <span className="text-blue-600 font-semibold">{zoneName}</span>
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 fade-in" style={{ animationDelay: '100ms' }}>
           <LiveCallIndicator activeCalls={activeCalls} />
-          <span className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            System Online
+          <span className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 rounded-lg text-sm font-semibold border border-emerald-200 shadow-sm">
+            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-500/50" />
+            {t.dashboard.systemOnline}
           </span>
         </div>
       </div>
 
-      {/* Enhanced KPI Cards - 6 columns */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Enhanced KPI Cards - Responsive grid based on sidebar state */}
+      <div className={`grid gap-3 mb-2 ${
+        isCollapsed 
+          ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' 
+          : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
+      }`}>
         <KPICard
-          title="Total Complaints"
+          title={t.dashboard.totalComplaints}
           value={isLoading ? '...' : stats.totalComplaints.toLocaleString()}
-          icon={<FileText className="w-5 h-5" />}
+          icon={<FileText className="w-full h-full" />}
           trend={{ value: Math.abs(stats.complaintTrend), isPositive: stats.complaintTrend < 0, label: 'vs yesterday' }}
           color="blue"
         />
         <KPICard
-          title="Resolved Today"
+          title={t.dashboard.resolvedToday}
           value={isLoading ? '...' : stats.resolvedToday.toLocaleString()}
-          icon={<CheckCircle2 className="w-5 h-5" />}
+          icon={<CheckCircle2 className="w-full h-full" />}
           trend={{ value: stats.resolutionTrend, isPositive: true, label: 'vs yesterday' }}
           color="emerald"
         />
         <KPICard
-          title="Avg Resolution"
+          title={t.dashboard.avgResolution}
           value={isLoading ? '...' : stats.avgResolutionTime}
-          icon={<Clock className="w-5 h-5" />}
+          icon={<Clock className="w-full h-full" />}
           color="amber"
-          subtitle="Target: 24h"
+          subtitle={t.dashboard.target}
         />
         <KPICard
-          title="SLA Compliance"
+          title={t.dashboard.slaCompliance}
           value={isLoading ? '...' : `${slaCompliance}%`}
-          icon={<Shield className="w-5 h-5" />}
+          icon={<Shield className="w-full h-full" />}
           trend={{ value: 3, isPositive: true, label: 'this week' }}
           color="cyan"
         />
         <KPICard
-          title="Escalation Rate"
+          title={t.dashboard.escalationRate}
           value={isLoading ? '...' : `${escalationRate}%`}
-          icon={<Flame className="w-5 h-5" />}
+          icon={<Flame className="w-full h-full" />}
           trend={{ value: 2, isPositive: true, label: 'reduced' }}
           color="red"
         />
         <KPICard
-          title="Live Agents"
+          title={t.dashboard.liveAgents}
           value={isLoading ? '...' : stats.liveAgents}
-          icon={<Users className="w-5 h-5" />}
+          icon={<Users className="w-full h-full" />}
           color="purple"
-          subtitle="AI + Human"
+          subtitle={t.dashboard.aiHuman}
         />
       </div>
 
-      {/* Main Content Grid - 3 columns */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left Column - Heatmap */}
-        <div className="xl:col-span-2 space-y-6">
-          <RealtimeHeatmap />
-
-          {/* AI Insights - Below heatmap */}
-          <AIInsightsPanel insights={generateInsights()} />
-        </div>
-
-        {/* Right Column - Voice Agent + Activity */}
-        <div className="xl:col-span-1 space-y-6">
-          {/* Voice Agent Widget - HERO FEATURE */}
+      {/* ============================================
+          CALL-CENTERED LOWER SECTION
+          ============================================ */}
+      
+      {/* Primary Section: Voice Agent (Dominant) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+        {/* Left: Voice Agent - Takes 3 columns (60%) - VISUALLY DOMINANT */}
+        <div className="lg:col-span-3">
           <VoiceAgent
             publicKey={process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || ''}
             assistantId={process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || ''}
           />
+        </div>
 
-          {/* Recent Activity */}
+        {/* Right: Map + Activity - Takes 2 columns (40%) - SECONDARY */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Compact Map */}
+          <div className="relative">
+            <RealtimeHeatmap />
+          </div>
+          
+          {/* Recent Activity - Compact */}
           <RecentActivityCard activities={activities} />
         </div>
       </div>
 
-      {/* Bottom Row - Sentiment + Leaderboard + Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <SentimentGauge
-          positive={sentiment.positive}
-          neutral={sentiment.neutral}
-          negative={sentiment.negative}
-        />
-        <ZoneLeaderboard zones={zoneLeaderboard} />
+      {/* Secondary Section: Insights + Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* AI Insights - Full width on mobile, 2 cols on desktop */}
+        <div className="lg:col-span-2">
+          <AIInsightsPanel insights={generateInsights()} />
+        </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Zap className="w-5 h-5 text-amber-600" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-2 gap-2">
-              <Link href="/complaints">
-                <Button variant="outline" className="w-full h-auto py-3 flex-col gap-1 text-xs">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  Complaints
-                </Button>
-              </Link>
-              <Link href="/broadcast">
-                <Button variant="outline" className="w-full h-auto py-3 flex-col gap-1 text-xs">
-                  <Phone className="w-4 h-4 text-emerald-600" />
-                  Broadcast
-                </Button>
-              </Link>
-              <Link href="/analytics">
-                <Button variant="outline" className="w-full h-auto py-3 flex-col gap-1 text-xs">
-                  <BarChart3 className="w-4 h-4 text-purple-600" />
-                  Analytics
-                </Button>
-              </Link>
-              <Link href="/heatmap">
-                <Button variant="outline" className="w-full h-auto py-3 flex-col gap-1 text-xs">
-                  <Target className="w-4 h-4 text-red-600" />
-                  Full Map
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Sentiment Gauge */}
+        <div className="lg:col-span-1">
+          <SentimentGauge
+            positive={sentiment.positive}
+            neutral={sentiment.neutral}
+            negative={sentiment.negative}
+          />
+        </div>
+
+        {/* Zone Leaderboard */}
+        <div className="lg:col-span-1">
+          <ZoneLeaderboard zones={zoneLeaderboard} />
+        </div>
       </div>
     </div>
   );
